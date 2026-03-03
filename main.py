@@ -1,5 +1,4 @@
 # Simple Password Manager with encryption!
-
 #These imports are for encryption!
 import base64
 import os
@@ -7,7 +6,13 @@ from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
+import json
+# Define the base directory for storing files
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+passwords_path = os.path.join(BASE_DIR, "passwords.json")
+salt_path = os.path.join(BASE_DIR, "salt.key")
 
+print("Loading from:", passwords_path)
 # Function to generate a key from the master password
 def generate_key(master_password, salt):
     kdf = PBKDF2HMAC(
@@ -19,19 +24,20 @@ def generate_key(master_password, salt):
     )
     key = base64.urlsafe_b64encode(kdf.derive(master_password.encode()))
     return key
-
-import json
+print("Loading from:", passwords_path)
 # Check if salt exists, if not create one
-if os.path.exists("salt.key"):
-    with open("salt.key", "rb") as salt_file:
+salt_path = os.path.join(BASE_DIR, "salt.key")
+
+if os.path.exists(salt_path):
+    with open(salt_path, "rb") as salt_file:
         salt = salt_file.read()
 else:
     salt = os.urandom(16)
-    with open("salt.key", "wb") as salt_file:
+    with open(salt_path, "wb") as salt_file:
         salt_file.write(salt)
 # Try to load existing data
 try:
-    with open("passwords.json", "r") as file:
+    with open(passwords_path, "r") as file:
         data = json.load(file)
 except FileNotFoundError:
     data = {}
@@ -54,6 +60,7 @@ while True:
         email = input("Enter the email: ")
         password = input("Enter the password: ")
         encrypted_password = fernet.encrypt(password.encode()).decode()
+        print("DEBUG ENCRYPTED:", encrypted_password)  # Debugging line to check encryption
 
         data[website] = {
             "email": email,
@@ -61,7 +68,7 @@ while True:
         }
 
         # Save immediately after adding
-        with open("passwords.json", "w") as file:
+        with open(passwords_path, "w") as file:
             json.dump(data, file, indent=4)
 
         print("Password saved successfully!")
@@ -81,7 +88,7 @@ while True:
 
     elif choice == "3":
         # Save before exiting
-        with open("passwords.json", "w") as file:
+        with open(passwords_path, "w") as file:
             json.dump(data, file, indent=4)
 
         print("Exiting the Password Manager. Goodbye!")
