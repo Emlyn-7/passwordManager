@@ -7,10 +7,13 @@ from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 import json
+import hashlib
+from getpass import getpass
 # Define the base directory for storing files
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 passwords_path = os.path.join(BASE_DIR, "passwords.json")
 salt_path = os.path.join(BASE_DIR, "salt.key")
+master_path = os.path.join(BASE_DIR, "master.hash")
 
 print("Loading from:", passwords_path)
 # Function to generate a key from the master password
@@ -24,9 +27,7 @@ def generate_key(master_password, salt):
     )
     key = base64.urlsafe_b64encode(kdf.derive(master_password.encode()))
     return key
-print("Loading from:", passwords_path)
 # Check if salt exists, if not create one
-salt_path = os.path.join(BASE_DIR, "salt.key")
 
 if os.path.exists(salt_path):
     with open(salt_path, "rb") as salt_file:
@@ -41,8 +42,30 @@ try:
         data = json.load(file)
 except FileNotFoundError:
     data = {}
-# Get the master password and generate the key
-master_password = input("Enter your master password: ")
+# Master password setup / verification
+if not os.path.exists(master_path):
+
+    print("No master password found.")
+    master_password = getpass("Create a master password: ")
+
+    hashed = hashlib.sha256(master_password.encode()).hexdigest()
+
+    with open(master_path, "w") as f:
+        f.write(hashed)
+
+    print("Master password created!")
+
+else:
+
+    master_password = getpass("Enter your master password: ")
+    hashed = hashlib.sha256(master_password.encode()).hexdigest()
+
+    with open(master_path, "r") as f:
+        stored_hash = f.read()
+
+    if hashed != stored_hash:
+        print("Incorrect master password. Exiting.")
+        exit()
 key = generate_key(master_password, salt)
 fernet = Fernet(key)
 
