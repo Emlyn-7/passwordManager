@@ -8,6 +8,8 @@ from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.backends import default_backend
 import json
 import hashlib
+import secrets
+import string
 from getpass import getpass
 # Define the base directory for storing files
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -56,18 +58,35 @@ if not os.path.exists(master_path):
     print("Master password created!")
 
 else:
+#Allows 3 attempts to enter the correct master password
+    attempts = 3
 
+while attempts > 0:
     master_password = getpass("Enter your master password: ")
     hashed = hashlib.sha256(master_password.encode()).hexdigest()
 
     with open(master_path, "r") as f:
         stored_hash = f.read()
 
-    if hashed != stored_hash:
-        print("Incorrect master password. Exiting.")
-        exit()
+    if hashed == stored_hash:
+        break
+
+    attempts -= 1
+    print(f"Incorrect password. Attempts left: {attempts}")
+
+if attempts == 0:
+    print("Too many failed attempts. Exiting.")
+    exit()
 key = generate_key(master_password, salt)
 fernet = Fernet(key)
+# Function to generate a random password
+def generate_password(length=16):
+
+    characters = string.ascii_letters + string.digits + string.punctuation
+
+    password = ''.join(secrets.choice(characters) for i in range(length))
+
+    return password
 
 while True:
     # Display the menu
@@ -110,6 +129,14 @@ while True:
                 print(f"Website: {website}\n  Email: {email}\n  Password: {decrypted_password}\n")
 
     elif choice == "3":
+
+        length = int(input("Enter password length (default 16): ") or 16)
+
+        new_password = generate_password(length)
+
+        print("Generated Password:", new_password)
+
+    elif choice == "4":
         # Save before exiting
         with open(passwords_path, "w") as file:
             json.dump(data, file, indent=4)
